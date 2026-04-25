@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Moosic</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,300&family=Josefin+Sans:wght@300&family=Caveat:wght@700&family=Boogaloo&family=Space+Grotesk:wght@700&family=Kalam:wght@700&family=IM+Fell+English:ital@1&family=Playfair+Display:ital,wght@0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; background: #18182a;
+  display: flex; justify-content: center; align-items: center;
+  overflow: hidden;
+}
+
+.scene { position: relative; }
+.scene-glow {
+  position: absolute; inset: -60px; border-radius: 120px;
+  filter: blur(90px); opacity: 0.25; z-index: 0; pointer-events: none;
+  transition: background 0.85s ease;
+}
+
+.phone {
+  width: 390px; height: 844px; border-radius: 52px; overflow: hidden;
+  position: relative; z-index: 1;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 32px 80px rgba(0,0,0,0.6);
+  display: flex; flex-direction: column; align-items: center;
+  transition: background 0.85s ease;
+}
+.phone::before {
+  content: ''; position: absolute; inset: 0; z-index: 300; pointer-events: none;
+  border-radius: 52px; opacity: 0.4; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+.hdr {
+  width: 100%; padding: 44px 28px 0;
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.app-name {
+  font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase; color: rgba(0,0,0,0.3);
+}
+
+.rec-section {
+  width: 100%; display: flex; flex-direction: column; align-items: center;
+  margin-top: 10px; position: relative; flex-shrink: 0;
+}
+
+.tonearm {
+  position: absolute; top: 10px; right: 36px; z-index: 20;
+  transform-origin: 10px 10px;
+  transition: transform 0.65s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.tonearm.lifted { transform: rotate(-26deg); }
+.arm-pivot {
+  width: 20px; height: 20px;
+  background: radial-gradient(circle at 38% 35%, #d8d8d8, #888 60%, #555);
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+  margin-bottom: -6px; margin-left: -4px;
+}
+.arm-shaft {
+  width: 8px; height: 80px;
+  background: linear-gradient(165deg, #c8c8c8 0%, #909090 40%, #606060 80%, #484848 100%);
+  border-radius: 4px 4px 2px 2px;
+  transform: rotate(26deg); transform-origin: top center; position: relative;
+  box-shadow: 1px 2px 6px rgba(0,0,0,0.35);
+}
+.arm-head {
+  position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
+  width: 13px; height: 13px;
+  background: radial-gradient(circle at 38% 35%, #b0b0b0, #505050);
+  border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.55);
+}
+
+.record-wrap { width: 240px; height: 240px; position: relative; }
+.record {
+  width: 240px; height: 240px; border-radius: 50%;
+  background: repeating-radial-gradient(circle at center,
+    #06060e 0px,  #06060e 2px,
+    #1c1c32 2px,  #1c1c32 2.6px,
+    #06060e 2.6px,#06060e 4.8px,
+    #141428 4.8px,#141428 5.2px
+  );
+  box-shadow: 0 14px 36px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.35),
+    inset 0 0 0 1px rgba(255,255,255,0.03);
+  position: relative; will-change: transform;
+}
+/* Angular conic sweep ON the record — rotates with it, making spin visible */
+.record::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255,255,255,0.00)  0deg,
+    rgba(255,255,255,0.07) 20deg,
+    rgba(255,255,255,0.00) 45deg,
+    rgba(255,255,255,0.00) 155deg,
+    rgba(255,255,255,0.05) 175deg,
+    rgba(255,255,255,0.00) 200deg,
+    rgba(255,255,255,0.00) 300deg,
+    rgba(255,255,255,0.06) 320deg,
+    rgba(255,255,255,0.00) 345deg
+  );
+}
+.record.spinning { animation: spin 1.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Fixed light overlay — stays still while disc spins beneath */
+.record-shine {
+  position: absolute; inset: 0; border-radius: 50%;
+  pointer-events: none; z-index: 5;
+  background:
+    radial-gradient(ellipse 58% 28% at 34% 27%, rgba(255,255,255,0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 28% 12% at 29% 21%, rgba(255,255,255,0.14) 0%, transparent 55%),
+    linear-gradient(148deg, rgba(255,255,255,0.06) 0%, transparent 48%, rgba(0,0,0,0.13) 100%);
+}
+/* Slow iridescent shimmer */
+.record-shine::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(
+    from 210deg,
+    transparent        0deg,
+    rgba(255,255,255,0.05) 35deg,
+    rgba(180,210,255,0.04) 75deg,
+    transparent       115deg,
+    rgba(255,230,180,0.03) 195deg,
+    transparent       235deg,
+    rgba(255,255,255,0.04) 300deg,
+    transparent       360deg
+  );
+  animation: iridescent 16s linear infinite;
+}
+/* Edge vignette */
+.record-shine::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at center, transparent 58%, rgba(0,0,0,0.22) 100%);
+}
+@keyframes iridescent { to { transform: rotate(360deg); } }
+.rec-label {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.18), 0 4px 16px rgba(0,0,0,0.35);
+  transition: background 0.85s ease;
+}
+.rec-hole { width: 10px; height: 10px; background: #13132a; border-radius: 50%; }
+
+.track-info { margin-top: 22px; text-align: center; padding: 0 44px; width: 100%; flex-shrink: 0; }
+.track-ttl { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.3s ease; }
+
+.eq { display: flex; gap: 3px; align-items: flex-end; height: 22px; margin-top: 16px; }
+.bar { width: 4px; border-radius: 2px; height: 3px; transition: background 0.85s ease; }
+.playing .bar { animation: bounce var(--dur,.5s) ease-in-out infinite alternate; animation-delay: var(--del,0s); }
+@keyframes bounce { from { height: 3px; opacity: 0.5; } to { height: var(--h,20px); opacity: 1; } }
+
+.controls { display: flex; gap: 12px; margin-top: 20px; margin-bottom: 4px; align-items: center; flex-shrink: 0; }
+.btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: none; background: #1a1a2e;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform 0.15s; color: #fff; font-size: 16px;
+  font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.9); }
+
+.sep { display: flex; align-items: center; gap: 10px; width: 100%; padding: 20px 36px 0; flex-shrink: 0; }
+.sep-line { flex: 1; height: 1px; background: rgba(0,0,0,0.08); }
+.sep-dot { width: 4px; height: 4px; border-radius: 50%; transition: background 0.85s ease; }
+
+.emotion-area {
+  flex: 1; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  padding: 0 14px; min-height: 0; gap: 10px;
+}
+
+.date-above {
+  font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+  color: rgba(0,0,0,0.58); letter-spacing: 0.10em; text-transform: uppercase;
+  margin-bottom: -4px;
+}
+
+.q {
+  font-family: 'Playfair Display', serif; font-style: italic;
+  font-size: 17px; font-weight: 400; color: rgba(0,0,0,0.58);
+  text-align: center;
+}
+
+.word-row {
+  width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 0;
+}
+
+.nav-arrow {
+  flex-shrink: 0; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px; cursor: pointer; opacity: 0.72;
+  transition: opacity 0.25s ease, transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent; border-radius: 50%;
+}
+.nav-arrow:hover { opacity: 1; }
+.nav-arrow:active { transform: scale(0.88); }
+.nav-arrow svg { width: 18px; height: 18px; transition: stroke 0.85s ease; }
+
+.word-clip {
+  flex: 1; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+  position: relative; height: 120px;
+}
+
+.emotion-name {
+  position: absolute; bottom: 8px; white-space: nowrap;
+  text-align: center; line-height: 1.0; will-change: transform, opacity;
+}
+
+.no-track-badge {
+  font-size: 10px; font-family: 'DM Sans', sans-serif;
+  color: rgba(0,0,0,0.28); letter-spacing: 0.08em;
+  margin-top: -6px;
+}
+
+.log-area {
+  width: 100%; padding: 0 36px 40px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.log-btn {
+  width: 100%; padding: 14px 0; background: transparent; color: #1a1a2e;
+  border: 1.5px solid rgba(0,0,0,0.28);
+  border-radius: 32px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.08em; cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s, border-color 0.85s ease, color 0.85s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.log-btn:active { transform: scale(0.97); opacity: 0.85; }
+.log-ok { font-size: 12px; color: rgba(0,0,0,0.38); height: 16px; font-family: 'DM Sans', sans-serif; opacity: 0; transition: opacity 0.3s; }
+.log-ok.show { opacity: 1; }
+
+/* ── INFO BUTTON ── */
+.info-btn {
+  width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: rgba(0,0,0,0.32); font-size: 15px;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+  transition: color 0.2s, background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.info-btn:hover { color: rgba(0,0,0,0.58); background: rgba(0,0,0,0.05); }
+
+/* ── MODAL BACKDROP ── */
+.modal-backdrop {
+  position: absolute; inset: 0; z-index: 400; border-radius: 52px;
+  background: rgba(0,0,0,0.18); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+/* ── MODAL SHEET ── */
+.modal-sheet {
+  width: 100%; background: #fff;
+  border-radius: 28px 28px 52px 52px;
+  padding: 20px 28px 44px;
+  transform: translateY(30px);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  max-height: 72%;
+  overflow-y: auto;
+}
+.modal-backdrop.open .modal-sheet { transform: translateY(0); }
+
+.modal-handle {
+  width: 36px; height: 4px; background: rgba(0,0,0,0.12); border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600;
+  color: rgba(0,0,0,0.75); margin-bottom: 18px;
+}
+.credit-list { display: flex; flex-direction: column; gap: 14px; }
+.credit-item {
+  padding-bottom: 14px; border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+  color: rgba(0,0,0,0.55); line-height: 1.6;
+}
+.credit-item:last-child { border-bottom: none; padding-bottom: 0; }
+.credit-track {
+  font-size: 12px; font-weight: 600; color: rgba(0,0,0,0.72);
+  margin-bottom: 2px; letter-spacing: 0.02em;
+}
+.credit-code { font-size: 10px; color: rgba(0,0,0,0.38); letter-spacing: 0.06em; margin-top: 2px; }
+.credit-item a { color: rgba(0,0,0,0.55); text-decoration: underline; text-underline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="scene-glow" id="sceneGlow"></div>
+  <div class="phone" id="phone">
+
+    <div class="hdr">
+      <span class="app-name">Moosic</span>
+      <button class="info-btn" onclick="toggleCredits()" aria-label="Music credits">ⓘ</button>
+    </div>
+
+    <!-- Credits modal -->
+    <div class="modal-backdrop" id="modalBackdrop" onclick="closeCreditsOnBackdrop(event)">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Music Credits</div>
+        <div class="credit-list">
+          <div class="credit-item">
+            <div class="credit-track">Joyful — "Sunny"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Yunior Arronte
+            <div class="credit-code">License: WOXCX2Q1AN5VFHQM</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Grateful — "New Frontier"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Benjamin Tissot
+            <div class="credit-code">License: ITTQWFSDWD6XATDZ</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Peaceful — "Piano Moment"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Benjamin Tissot
+            <div class="credit-code">License: AIHLX1DNIV3J8LMI</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Hopeful — "Angels by My Side"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Lunar Years
+            <div class="credit-code">License: MPYTFAS6LRPRXXEQ</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Anxious — "Sway"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Yunior Arronte
+            <div class="credit-code">License: LWUQVGFC3W0FMAVA</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Confused — "Moonlight Drive"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Benjamin Tissot
+            <div class="credit-code">License: F1KBAW0ALDJQMM2I</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Frustrated — "Tomorrow"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Benjamin Tissot
+            <div class="credit-code">License: HJPIZ2CFENQFDFPC</div>
+          </div>
+          <div class="credit-item">
+            <div class="credit-track">Sad — "Sad Day"</div>
+            Music by <a href="https://www.bensound.com/royalty-free-music" target="_blank">Bensound.com</a> · Artist: Lunar Years
+            <div class="credit-code">License: YIEOPUWDHXC3QTV8</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-section">
+      <div class="tonearm lifted" id="tonearm">
+        <div class="arm-pivot"></div>
+        <div class="arm-shaft"><div class="arm-head"></div></div>
+      </div>
+      <div class="record-wrap">
+        <div class="record" id="record">
+          <div class="rec-label" id="recLabel"><div class="rec-hole"></div></div>
+        </div>
+        <div class="record-shine"></div>
+      </div>
+    </div>
+
+    <div class="track-info">
+      <div class="track-ttl" id="trackTtl">—</div>
+    </div>
+
+    <div class="eq" id="eq"></div>
+
+    <div class="controls">
+      <button class="btn" id="playBtn" onclick="togglePlay()" aria-label="Play">▶</button>
+    </div>
+
+    <div class="sep">
+      <div class="sep-line"></div>
+      <div class="sep-dot" id="sepDot"></div>
+      <div class="sep-line"></div>
+    </div>
+
+    <div class="emotion-area">
+      <div class="date-above" id="dateTxt"></div>
+      <div class="q">How are you feeling today?</div>
+
+      <div class="word-row">
+        <div class="nav-arrow" id="arrowLeft" onclick="navClick(-1)" role="button" aria-label="Previous mood" tabindex="0">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline id="svgLeft" points="11,3 5,9 11,15"
+              stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="word-clip" id="wordClip">
+          <div class="emotion-name" id="emotionName"></div>
+        </div>
+
+        <div class="nav-arrow" id="arrowRight" onclick="navClick(1)" role="button" aria-label="Next mood" tabindex="0">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline id="svgRight" points="7,3 13,9 7,15"
+              stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="no-track-badge" id="noTrackBadge"></div>
+    </div>
+
+    <div class="log-area">
+      <button class="log-btn" onclick="logMood()">Log this mood</button>
+      <div class="log-ok" id="logOk"></div>
+    </div>
+
+  </div>
+</div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+const EM = [
+  { name:'Joyful',      font:'Quicksand',          style:'normal', weight:'500', size:64, tracking:'0.04em',  color:'rgba(0,0,0,0.68)', accent:'#FFB800', glow:'rgba(255,184,0,0.55)',    bg:'#FFFBEA', track:'bensound-sunny_joyful.mp3' },
+  { name:'Grateful',    font:'Playfair Display',   style:'italic', weight:'400', size:58, tracking:'0.06em',  color:'rgba(0,0,0,0.68)', accent:'#B5674D', glow:'rgba(181,103,77,0.45)',   bg:'#FEF3EE', track:'bensound-newfrontier_grateful.mp3' },
+  { name:'Peaceful',    font:'Cormorant Garamond', style:'italic', weight:'300', size:58, tracking:'0.04em',  color:'rgba(0,0,0,0.68)', accent:'#2EB87A', glow:'rgba(46,184,122,0.45)',   bg:'#EDFAF3', track:'bensound-pianomoment_peaceful.mp3' },
+  { name:'Hopeful',     font:'Josefin Sans',       style:'normal', weight:'300', size:50, tracking:'0.18em',  color:'rgba(0,0,0,0.68)', accent:'#FF7A1A', glow:'rgba(255,122,26,0.45)',   bg:'#FFF5EC', track:'bensound-angelsbymyside_hopeful.mp3' },
+  { name:'Anxious',     font:'Space Grotesk',      style:'normal', weight:'700', size:54, tracking:'-0.02em', color:'rgba(0,0,0,0.68)', accent:'#7C3AED', glow:'rgba(124,58,237,0.45)',   bg:'#F3EEFF', track:'bensound-sway_anxious.mp3' },
+  { name:'Confused',    font:'Kalam',              style:'normal', weight:'700', size:52, tracking:'0.01em',  color:'rgba(0,0,0,0.68)', accent:'#00B4D8', glow:'rgba(0,180,216,0.45)',    bg:'#E8F9FD', track:'bensound-moonlightdrive_Confused.mp3' },
+  { name:'Frustrated',  font:'Boogaloo',           style:'normal', weight:'400', size:58, tracking:'0.03em',  color:'rgba(0,0,0,0.68)', accent:'#E5151A', glow:'rgba(229,21,26,0.45)',    bg:'#FFECEC', track:'bensound-tomorrow_frustrated.mp3' },
+  { name:'Sad',         font:'IM Fell English',    style:'italic', weight:'400', size:62, tracking:'0.01em',  color:'rgba(0,0,0,0.68)', accent:'#1A56DB', glow:'rgba(26,86,219,0.45)',    bg:'#EAF0FF', track:'bensound-sadday_sad.mp3' },
+];
+const N = EM.length;
+
+// Equalizer bars
+[['26px','0.52s','0s'],['18px','0.37s','0.07s'],['30px','0.61s','0.13s'],
+ ['14px','0.44s','0.02s'],['28px','0.69s','0.19s'],['22px','0.34s','0.09s'],
+ ['16px','0.57s','0.15s'],['28px','0.46s','0.04s'],['12px','0.65s','0.21s'],
+ ['24px','0.39s','0.11s'],['18px','0.55s','0.06s'],['10px','0.71s','0.23s'],
+].forEach(([h, dur, del]) => {
+  const b = document.createElement('div');
+  b.className = 'bar';
+  b.style.setProperty('--h', h);
+  b.style.setProperty('--dur', dur);
+  b.style.setProperty('--del', del);
+  document.getElementById('eq').appendChild(b);
+});
+
+// Audio
+const audio = document.getElementById('audio');
+let activeIdx = 0, isPlaying = false, hasInteracted = false;
+
+function setPlayState(p) {
+  isPlaying = p;
+  document.getElementById('record').classList.toggle('spinning', p);
+  document.getElementById('tonearm').classList.toggle('lifted', !p);
+  document.getElementById('eq').classList.toggle('playing', p);
+  const btn = document.getElementById('playBtn');
+  btn.textContent = p ? '⏸' : '▶';
+  btn.setAttribute('aria-label', p ? 'Pause' : 'Play');
+}
+
+function attemptPlay() {
+  return audio.play()
+    .then(() => { setPlayState(true); hasInteracted = true; })
+    .catch(() => setPlayState(false));
+}
+
+function togglePlay() {
+  hasInteracted = true;
+  const em = EM[activeIdx];
+  if (!em.track) { setPlayState(false); return; }
+  if (!audio.src || audio.dataset.name !== em.track) {
+    audio.src = em.track;
+    audio.dataset.name = em.track;
+  }
+  isPlaying ? (audio.pause(), setPlayState(false)) : attemptPlay();
+}
+
+function nextTrack() { select((activeIdx + 1) % N, 1); }
+audio.addEventListener('ended', nextTrack);
+
+// Word slide transition
+const nameEl = document.getElementById('emotionName');
+let transitioning = false;
+
+function applyTypography(el, em) {
+  el.textContent      = em.name;
+  el.style.fontFamily    = `'${em.font}', serif`;
+  el.style.fontStyle     = em.style;
+  el.style.fontWeight    = em.weight;
+  el.style.fontSize      = `${em.size}px`;
+  el.style.letterSpacing = em.tracking;
+  el.style.color         = em.color;
+}
+
+function slideWord(em, dir) {
+  if (transitioning) {
+    applyTypography(nameEl, em);
+    nameEl.style.transition = 'none';
+    nameEl.style.transform  = 'translateX(0)';
+    nameEl.style.opacity    = '1';
+    return;
+  }
+  transitioning = true;
+  const exitX  = dir > 0 ? '-55px' : '55px';
+  const enterX = dir > 0 ?  '55px' : '-55px';
+
+  nameEl.style.transition = 'transform 0.28s cubic-bezier(0.4,0,1,1), opacity 0.22s ease';
+  nameEl.style.transform  = `translateX(${exitX})`;
+  nameEl.style.opacity    = '0';
+
+  setTimeout(() => {
+    nameEl.style.transition = 'none';
+    nameEl.style.transform  = `translateX(${enterX})`;
+    applyTypography(nameEl, em);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      nameEl.style.transition = 'transform 0.38s cubic-bezier(0,0,0.2,1), opacity 0.3s ease';
+      nameEl.style.transform  = 'translateX(0)';
+      nameEl.style.opacity    = '1';
+      setTimeout(() => { transitioning = false; }, 400);
+    }));
+  }, 260);
+}
+
+function applyAccent(em) {
+  document.getElementById('phone').style.background        = em.bg;
+  document.getElementById('sceneGlow').style.background    = em.accent;
+  document.getElementById('recLabel').style.background     = em.accent;
+  document.getElementById('sepDot').style.background       = em.accent;
+  document.querySelectorAll('.bar').forEach(b => b.style.background = em.accent);
+  document.getElementById('svgLeft').setAttribute('stroke',  em.accent);
+  document.getElementById('svgRight').setAttribute('stroke', em.accent);
+
+  const ttl = document.getElementById('trackTtl');
+  ttl.style.opacity = '0';
+  setTimeout(() => {
+    ttl.textContent   = em.name + ' Mix';
+    ttl.style.opacity = '1';
+  }, 200);
+
+  const badge = document.getElementById('noTrackBadge');
+  badge.textContent = em.track ? '' : 'No track yet';
+}
+
+function select(idx, dir) {
+  const prev = activeIdx;
+  activeIdx  = ((idx % N) + N) % N;
+  if (dir === undefined) dir = (activeIdx > prev || (prev === N - 1 && activeIdx === 0)) ? 1 : -1;
+  const em = EM[activeIdx];
+
+  applyAccent(em);
+  slideWord(em, dir);
+
+  if (em.track) {
+    if (audio.dataset.name !== em.track) {
+      audio.pause();
+      audio.src = em.track;
+      audio.dataset.name = em.track;
+      audio.currentTime = 0;
+    }
+    if (hasInteracted) attemptPlay();
+  } else {
+    audio.pause();
+    audio.src = '';
+    audio.dataset.name = '';
+    setPlayState(false);
+  }
+}
+
+function navClick(dir) {
+  hasInteracted = true;
+  select(activeIdx + dir, dir);
+}
+
+function toggleCredits() {
+  document.getElementById('modalBackdrop').classList.toggle('open');
+}
+function closeCreditsOnBackdrop(e) {
+  if (e.target === document.getElementById('modalBackdrop')) {
+    document.getElementById('modalBackdrop').classList.remove('open');
+  }
+}
+
+function logMood() {
+  const el = document.getElementById('logOk');
+  el.textContent = `${EM[activeIdx].name} logged ✓`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// Swipe support
+let sx = 0, drag = false;
+const phone = document.getElementById('phone');
+phone.addEventListener('touchstart', e => { sx = e.touches[0].clientX; drag = true; hasInteracted = true; }, { passive: true });
+phone.addEventListener('touchend',   e => {
+  if (!drag) return; drag = false;
+  const dx = e.changedTouches[0].clientX - sx;
+  if (Math.abs(dx) > 36) { const d = dx < 0 ? 1 : -1; select(activeIdx + d, d); }
+}, { passive: true });
+phone.addEventListener('mousedown', e => { sx = e.clientX; drag = true; });
+window.addEventListener('mouseup',  e => {
+  if (!drag) return; drag = false;
+  const dx = e.clientX - sx;
+  if (Math.abs(dx) > 36) { const d = dx < 0 ? 1 : -1; select(activeIdx + d, d); }
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { hasInteracted = true; select(activeIdx + 1,  1); }
+  if (e.key === 'ArrowLeft')  { hasInteracted = true; select(activeIdx - 1, -1); }
+  if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
+});
+
+// Init
+document.getElementById('dateTxt').textContent =
+  new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+const init = EM[0];
+document.getElementById('phone').style.background       = init.bg;
+document.getElementById('sceneGlow').style.background   = init.accent;
+document.getElementById('recLabel').style.background    = init.accent;
+document.getElementById('sepDot').style.background      = init.accent;
+document.querySelectorAll('.bar').forEach(b => b.style.background = init.accent);
+document.getElementById('svgLeft').setAttribute('stroke',  init.accent);
+document.getElementById('svgRight').setAttribute('stroke', init.accent);
+document.getElementById('trackTtl').textContent = init.name + ' Mix';
+
+nameEl.style.opacity   = '1';
+nameEl.style.transform = 'translateX(0)';
+applyTypography(nameEl, init);
+
+if (init.track) {
+  audio.src = init.track;
+  audio.dataset.name = init.track;
+}
+</script>
+</body>
+</html>
